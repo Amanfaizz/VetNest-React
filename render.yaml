@@ -1,0 +1,44 @@
+services:
+  # Backend API & Socket.io WebService
+  - type: web
+    name: vetnest-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_OWNER_URL
+        sync: false
+      - key: CLIENT_STAFF_URL
+        sync: false
+
+  # Frontend Pet Owner Portal (Static Site)
+  - type: web
+    name: vetnest-owner-app
+    env: static
+    buildCommand: cd frontend-owner && npm install && npm run build
+    staticPublishPath: ./frontend-owner/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_SOCKET_URL
+        sync: false
+
+  # Frontend Hospital Staff Portal (Static Site)
+  - type: web
+    name: vetnest-staff-app
+    env: static
+    buildCommand: cd frontend-staff && npm install && npm run build
+    staticPublishPath: ./frontend-staff/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_SOCKET_URL
+        sync: false

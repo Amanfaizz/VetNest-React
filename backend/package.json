@@ -1,0 +1,23 @@
+{
+  "name": "vetnest-backend",
+  "version": "2.0.0",
+  "description": "VetNest Backend API & Socket.io Live Crowd Heat-Map Server",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seedAndSimulate.js"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^8.4.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.1",
+    "socket.io": "^4.7.5"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "vetnest-monorepo",
+  "version": "2.0.0",
+  "description": "VetNest - Dual-portal veterinary real-time crowd heat-mapping & OPD management monorepo for Bengaluru",
+  "private": true,
+  "scripts": {
+    "setup": "npm install --prefix backend && npm install --prefix frontend-owner && npm install --prefix frontend-staff",
+    "start:backend": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "start:owner": "cd frontend-owner && npm run dev",
+    "start:staff": "cd frontend-staff && npm run dev",
+    "build:owner": "cd frontend-owner && npm run build",
+    "build:staff": "cd frontend-staff && npm run build",
+    "build": "npm run build:owner && npm run build:staff",
+    "seed": "cd backend && npm run seed",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run start:owner\" \"npm run start:staff\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
