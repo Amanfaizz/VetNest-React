@@ -1,119 +1,246 @@
-# 🐾 VetNest - Monorepo Platform for Veterinary Hospitals (Bengaluru)
+# VetNest 🐾
 
-> **Slogan**: *"Smart healthcare for every paw."*
+**Smart healthcare for every paw.**
 
-**VetNest** is a 3-tier monorepo platform for veterinary hospitals across **Bengaluru, India**. It combines a **Pet Owner Interactive Heat Map Portal**, a **Hospital Staff OPD & Crowd Management Portal**, and a **Node.js/Express REST API + Socket.io Server** with background crowd simulation.
+VetNest is a veterinary hospital appointment and crowd-management platform for Bengaluru. It connects pet owners with veterinary hospitals and gives hospital staff a portal to manage appointments, patient queues, and hospital crowd levels.
 
----
+## Project Overview
 
-## 🏗️ Monorepo Directory Architecture
+VetNest has three main parts:
+
+1. **Pet Owner Portal** – lets pet owners browse hospitals, view hospital information, book appointments for their pets, and view their bookings.
+2. **Hospital Staff Portal** – lets staff members access the queue for their assigned hospital, view appointment and pet details, update appointment statuses, and manage crowd levels.
+3. **Backend API and real-time server** – handles authentication, appointment operations, MongoDB data, and Socket.IO events shared by the portals.
+
+Both portals use the same deployed backend and MongoDB Atlas database. Staff accounts are associated with a specific hospital through `hospitalId`, which is used by the backend to scope staff queue access.
+
+## Live Application
+
+| Component | URL |
+|---|---|
+| Backend health check | https://vetnest-backend.onrender.com/health |
+| Pet Owner Portal | https://vetnest-owner.onrender.com |
+| Hospital Staff Portal | https://vetnest-staff.onrender.com |
+
+Use the backend `/health` endpoint to check whether the API is responding.
+
+## Demo Login Credentials
+
+These are demonstration accounts. Do not reuse these passwords for real accounts.
+
+### Pet Owner
+
+| Role | Email | Password |
+|---|---|---|
+| Pet Owner | `owner@vetnest.app` | `owner12345` |
+
+### Hospital Staff
+
+| Hospital branch | Email | Password |
+|---|---|---|
+| Indiranagar | `staff.indiranagar@vetnest.app` | `staff12345` |
+| Koramangala | `staff.koramangala@vetnest.app` | `staff12345` |
+| Jayanagar | `staff.jayanagar@vetnest.app` | `staff12345` |
+| Whitefield | `staff.whitefield@vetnest.app` | `staff12345` |
+| Hebbal | `staff.hebbal@vetnest.app` | `staff12345` |
+| Malleshwaram | `staff.malleshwaram@vetnest.app` | `staff12345` |
+
+The staff accounts must exist in the deployed MongoDB database and each account must have the correct `HOSPITAL_STAFF` role and corresponding hospital `hospitalId`. Verify the demo logins before presenting.
+
+## Main Features
+
+### Pet Owner Portal
+- Browse available veterinary hospitals and view their details.
+- View hospital crowd information.
+- Book an appointment for a pet at a selected hospital.
+- View the owner's booked appointments.
+
+### Hospital Staff Portal
+- Staff login linked to an assigned hospital branch.
+- View the appointment queue for that hospital.
+- View appointment information such as pet name, species, triage level, complaint, token number, time slot, and status.
+- Update appointment status:
+  - `BOOKED`
+  - `CHECKED_IN`
+  - `IN_CONSULTATION`
+  - `COMPLETED`
+  - `CANCELLED`
+- Update the hospital crowd level:
+  - `LOW`
+  - `MODERATE`
+  - `HIGH`
+  - `CRITICAL`
+
+### Shared Data and Live Updates
+- Both portals communicate with the same backend and MongoDB Atlas database.
+- Appointment creation and status changes are saved by the backend.
+- The backend emits Socket.IO events such as `appointmentCreated` and `appointmentStatusUpdated`.
+- The staff portal uses the hospital ID associated with the logged-in staff account when working with its queue.
+- The staff queue can also be fetched from the backend API; a Socket.IO connection alone does not replace the queue API request.
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React |
+| Frontend build tool | Vite |
+| Backend runtime | Node.js |
+| Backend framework | Express.js |
+| Real-time communication | Socket.IO |
+| Database | MongoDB Atlas |
+| Object modelling | Mongoose |
+| Authentication | JSON Web Tokens (JWT) |
+| Password hashing | bcryptjs |
+| Security headers | Helmet |
+| Cross-origin requests | CORS |
+| Maps | OpenStreetMap |
+| Hosting | Render |
+
+## Application Architecture
 
 ```text
-vetnest-monorepo/
-├── .gitignore
-├── .env.example
-├── README.md
-├── package.json            # Root package.json with workspace scripts
-├── render.yaml             # Plug-and-play Render deployment spec
-├── backend/                # Express + Socket.io REST API Server
+┌──────────────────────┐       ┌──────────────────────┐
+│   Pet Owner Portal   │       │ Hospital Staff Portal│
+│     React + Vite     │       │     React + Vite     │
+└──────────┬───────────┘       └──────────┬───────────┘
+           │                              │
+           └──────── REST API / Socket.IO ┘
+                          │
+                ┌─────────▼─────────┐
+                │  Node.js + Express│
+                │   Backend API     │
+                │    Socket.IO      │
+                └─────────┬─────────┘
+                          │
+                ┌─────────▼─────────┐
+                │   MongoDB Atlas   │
+                │ Shared app data   │
+                └───────────────────┘
+```
+
+Both frontends communicate with the same backend. The backend reads and writes the shared MongoDB database and emits real-time events to connected clients.
+
+## API Routes
+
+Base URL: `https://vetnest-backend.onrender.com`
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Backend health check |
+| GET | `/api/hospitals` | Retrieve hospitals |
+| GET | `/api/hospitals/:id` | Retrieve hospital details |
+| PUT | `/api/hospitals/:id/crowd` | Update hospital crowd information |
+| POST | `/api/auth/owner/login` | Pet owner login |
+| POST | `/api/auth/staff/login` | Hospital staff login |
+| POST | `/api/appointments` | Book an appointment |
+| GET | `/api/appointments/my-appointments` | Retrieve the logged-in owner's appointments |
+| GET | `/api/appointments/hospital-queue` | Retrieve the logged-in staff member's hospital queue |
+| PUT | `/api/appointments/:id/status` | Update an appointment's status |
+
+Protected endpoints require a JWT in the request header:
+
+```http
+Authorization: Bearer <JWT_TOKEN>
+```
+
+## Socket.IO Events
+
+| Event | Purpose |
+|---|---|
+| `appointmentCreated` | Notifies connected clients that an appointment has been created. |
+| `appointmentStatusUpdated` | Notifies connected clients that an appointment status has changed. |
+| `hospitalsUpdated` | Sends updated hospital information, including crowd information, where emitted by the backend. |
+
+The staff portal should use the event payload's `hospitalId` to ensure that updates are relevant to the currently selected or authenticated hospital. Confirm the deployed backend and frontend event handling together when testing live updates.
+
+## Environment Variables
+
+### Backend
+
+Create a local `backend/.env` file. Use the variable names expected by the backend code:
+
+```env
+PORT=5000
+MONGO_URI=<your_mongodb_connection_string>
+JWT_SECRET=<your_long_random_secret>
+CLIENT_OWNER_URL=http://localhost:5173
+CLIENT_STAFF_URL=http://localhost:5174
+SIMULATION_INTERVAL_MS=20000
+```
+
+The values above are examples for local development. Use the actual frontend ports and variable names configured in the project. In Render, configure production environment variables in the backend service's Environment settings.
+
+### Frontend applications
+
+Configure the owner and staff frontend environment files with the deployed backend URL for production, or the local backend URL during development. The exact Vite variable names should match those referenced by the frontend source code. Common examples are:
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+Vite environment variables are read at build time. Rebuild or redeploy the relevant frontend after changing production frontend environment variables.
+
+### Security
+
+- Never commit `.env` files, MongoDB connection strings, JWT secrets, or private credentials to GitHub.
+- Keep `.env` in `.gitignore`.
+- Commit an `.env.example` containing placeholder values only.
+- If a database password or secret is exposed, rotate it and update the local and Render environment variables.
+- Do not put real credentials in screenshots, documentation, or public repositories.
+
+## Local Development
+
+1. Install Node.js and npm.
+2. Clone the repository.
+3. Install dependencies in the backend and frontend project folders, following the package scripts included in each `package.json`.
+4. Create the backend and frontend environment files using placeholder templates as a guide.
+5. Set the backend MongoDB connection string and JWT secret locally.
+6. Configure both frontends to use the local backend API and Socket.IO URL.
+7. Start the backend, owner frontend, and staff frontend using the scripts in their respective `package.json` files.
+
+Use a development database for local testing where possible. Do not commit local environment files.
+
+## Suggested Demonstration Flow
+
+1. Open the Pet Owner Portal and log in using the demo owner account.
+2. Open the Hospital Staff Portal in another browser tab or window and log in to a hospital branch.
+3. In the Owner Portal, select the same hospital and book an appointment for a pet.
+4. Check the corresponding Staff Portal queue for the new appointment.
+5. In the Staff Portal, change the appointment status to `CHECKED_IN`.
+6. Continue the status to `IN_CONSULTATION` and then `COMPLETED`.
+7. Demonstrate the hospital crowd-level controls.
+8. If demonstrating real-time updates, keep both portals open and check that the staff portal receives the update without a manual page refresh.
+
+## Repository Structure
+
+The project is organised as a monorepo. The main application areas include:
+
+```text
+VetNest-React/
+├── backend/
 │   ├── config/
-│   │   └── db.js           # Mongoose MongoDB connection & fallback
-│   ├── models/
-│   │   ├── Hospital.js     # GeoJSON Point & crowd level schema
-│   │   ├── User.js         # Roles: PET_OWNER, HOSPITAL_STAFF, ADMIN
-│   │   └── Appointment.js  # OPD token & triage status schema
 │   ├── middleware/
-│   │   └── auth.js         # JWT protection & hospital isolation middleware
+│   ├── models/
 │   ├── routes/
-│   │   ├── authRoutes.js   # Dual auth (/owner/register, /owner/login, /staff/login)
-│   │   ├── hospitalRoutes.js # GeoJSON heat-map list & staff manual crowd override
-│   │   └── appointmentRoutes.js # Appointment booking & staff queue management
-│   ├── scripts/
-│   │   └── seedAndSimulate.js # Seeds 12 Bengaluru hospitals + live simulator
-│   ├── server.js           # Express + Helmet + CORS + Socket.io + /health
-│   └── package.json
-├── frontend-owner/         # Pet Owner React App (Port 3000)
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── BengaluruMap.jsx # Interactive Leaflet heat map (Color-coded pins)
-│   │   │   ├── BookingModal.jsx # OPD appointment booking form
-│   │   │   └── AuthModal.jsx    # Owner login & registration
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css       # Soft teal/emerald light theme
-│   ├── index.html
-│   └── package.json
-└── frontend-staff/         # Hospital Staff React App (Port 3001)
-    ├── src/
-    │   ├── App.jsx         # Queue table & manual crowd override panel
-    │   ├── main.jsx
-    │   └── index.css       # Clean blue light theme
-    ├── index.html
-    └── package.json
+│   └── scripts/
+├── frontend-owner/
+├── frontend-staff/
+├── .gitignore
+└── README.md
 ```
+
+The exact file names and scripts may vary as the project evolves.
+
+## Notes and Limitations
+
+- Each staff account must be linked to the correct hospital document through `hospitalId`.
+- Staff queue access depends on the authenticated staff account and its hospital association.
+- Real-time updates require the backend and the relevant frontend to be running and connected.
+- If a Socket.IO update is not visible, check the browser console, Render backend logs, frontend environment variables, CORS configuration, and event payloads.
+- The staff queue is fetched from the backend API; a successful Socket.IO connection alone does not guarantee that the queue API is working.
+- Existing appointment records retain the booking details saved at the time of appointment creation unless the application explicitly updates them.
 
 ---
 
-## ⚡ Quick Start Guide (Local Development)
-
-### 1. Install Dependencies Across Monorepo
-```bash
-npm run setup
-```
-
-### 2. Seed Bengaluru Hospitals & Demo Accounts
-```bash
-npm run seed
-```
-
-This seeds **12 veterinary hospitals** across Bengaluru with exact coordinates, creates **1 Staff user per clinic**, and generates a **Demo Pet Owner** account (`owner@vetnest.app` / `owner12345`).
-
-### 3. Run Monorepo Services
-```bash
-# Run backend, owner app, and staff app concurrently:
-npm run dev
-```
-
-- **Backend API**: `http://localhost:5000`
-- **Pet Owner App**: `http://localhost:3000`
-- **Hospital Staff App**: `http://localhost:3001`
-- **API Health Check**: `http://localhost:5000/health`
-
----
-
-## 🔑 Demo Login Credentials
-
-### Pet Owner Portal (`http://localhost:3000`)
-- **Email**: `owner@vetnest.app`
-- **Password**: `owner12345`
-
-### Hospital Staff Portal (`http://localhost:3001`)
-- **Indiranagar Branch**: `staff.indiranagar@vetnest.app` / `staff12345`
-- **Koramangala Branch**: `staff.koramangala@vetnest.app` / `staff12345`
-- **Whitefield Branch**: `staff.whitefield@vetnest.app` / `staff12345`
-- **Jayanagar Branch**: `staff.jayanagar@vetnest.app` / `staff12345`
-
----
-
-## 📡 Key REST API Endpoints & Health Probe
-
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| `GET` | `/health` | Public | Deployment health check probe (`{ status: "ok", uptime: ... }`) |
-| `POST` | `/api/auth/owner/register` | Public | Register Pet Owner account |
-| `POST` | `/api/auth/owner/login` | Public | Login Pet Owner account |
-| `POST` | `/api/auth/staff/login` | Public | Login Hospital Staff & verify `hospitalId` binding |
-| `GET` | `/api/hospitals` | Public | Get GeoJSON list of Bengaluru hospitals & live crowd state |
-| `PUT` | `/api/hospitals/:id/crowd` | Staff Only | Manual crowd level override (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`) |
-| `POST` | `/api/appointments` | Owner Only | Book OPD appointment slot |
-| `GET` | `/api/appointments/my-appointments` | Owner Only | Get booked visits for current owner |
-| `GET` | `/api/appointments/hospital-queue` | Staff Only | Get queue strictly for staff's `hospitalId` |
-| `PUT` | `/api/appointments/:id/status` | Staff Only | Advance visit status (`BOOKED` ➔ `CHECKED_IN` ➔ `IN_CONSULTATION` ➔ `COMPLETED`) |
-
----
-
-## 🔄 Socket.io Live Events
-
-- `hospitalsUpdated`: Broadcasts live crowd density fluctuations and manual staff overrides to all connected Pet Owner map clients in real-time.
-- `appointmentCreated`: Broadcasts new walk-in / online bookings to staff dashboards.
-- `appointmentStatusUpdated`: Broadcasts visit state changes to owners and clinic receptionists.
+**VetNest — Smart healthcare for every paw.**
