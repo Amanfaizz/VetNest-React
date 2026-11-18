@@ -23,7 +23,8 @@ export const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'vetnest_super_secret_jwt_key_bengaluru_2026'
+      process.env.JWT_SECRET ||
+        'vetnest_super_secret_jwt_key_bengaluru_2026'
     );
 
     req.user = await User.findById(decoded.id).select('-password');
@@ -35,7 +36,6 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Attach hospital ID to request
     req.hospitalId = decoded.hospitalId || req.user.hospitalId;
 
     next();
@@ -47,7 +47,7 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Check whether the authenticated user has the required role
+// Check user role
 export const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
@@ -61,7 +61,7 @@ export const requireRole = (...roles) => {
   };
 };
 
-// Restrict access to hospital staff associated with a hospital
+// Restrict access to hospital staff
 export const requireHospitalStaff = (req, res, next) => {
   if (!req.user || req.user.role !== 'HOSPITAL_STAFF') {
     return res.status(403).json({
@@ -70,7 +70,6 @@ export const requireHospitalStaff = (req, res, next) => {
     });
   }
 
-  // Handle both ObjectId and populated Hospital document
   const hospital = req.user.hospitalId || req.hospitalId;
 
   const staffHospitalId =
@@ -85,7 +84,6 @@ export const requireHospitalStaff = (req, res, next) => {
     });
   }
 
-  // Store a clean ObjectId string for appointment queries
   req.staffHospitalId = staffHospitalId.toString();
 
   next();
