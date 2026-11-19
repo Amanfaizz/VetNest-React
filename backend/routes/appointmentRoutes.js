@@ -3,6 +3,11 @@ import express from 'express';
 
 import Appointment from '../models/Appointment.js';
 import Hospital from '../models/Hospital.js';
+import {
+  notifyOwnerOfStatus,
+  hasEmailTemplate,
+  isEmailConfigured,
+} from '../utils/mailer.js';
 
 import {
   protect,
@@ -248,9 +253,25 @@ router.put(
         );
       }
 
+      // E-mail the pet owner (their registered address) when the status actually CHANGED
+      // to one we have an e-mail template for (CHECKED_IN, IN_CONSULTATION).
+      // Fire-and-forget: we do NOT await it, so a slow or failing e-mail provider can never
+      // delay or break the staff member's click. notifyOwnerOfStatus() never throws.
+      const willEmail =
+        previousStatus !== status &&
+        hasEmailTemplate(status) &&
+        isEmailConfigured();
+
+      if (previousStatus !== status && hasEmailTemplate(status)) {
+        notifyOwnerOfStatus(appointment, status).catch((e) =>
+          console.error('[Email] unexpected error:', e.message)
+        );
+      }
+
       return res.json({
         success: true,
         message: `Appointment updated to ${status}`,
+        emailNotification: willEmail ? 'queued' : 'none',
         data: appointment,
       });
     } catch (err) {

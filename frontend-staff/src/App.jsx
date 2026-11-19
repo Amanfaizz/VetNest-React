@@ -384,7 +384,10 @@ export default function App() {
         await fetchHospitalDetails();
 
         showToast(
-          `Appointment updated to ${newStatus}`
+          `Appointment updated to ${newStatus}` +
+            (data.emailNotification === 'queued'
+              ? ' • owner notified by email 📧'
+              : '')
         );
       } else {
         alert(
